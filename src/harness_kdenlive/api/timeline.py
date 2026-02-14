@@ -37,6 +37,8 @@ class TimelineAPI:
         out_point: Optional[str] = None,
         allow_overlap: bool = False,
     ) -> str:
+        if position < 0:
+            raise ValueError("position must be >= 0")
         playlist = self._get_playlist(track_id)
         if not self.project.get_producers(id_filter=clip_id):
             raise ValueError(f"Producer '{clip_id}' not found")
@@ -66,6 +68,8 @@ class TimelineAPI:
     def move_clip(
         self, clip_ref: str, new_track: str, new_position: int, allow_overlap: bool = False
     ) -> bool:
+        if new_position < 0:
+            raise ValueError("position must be >= 0")
         clip = self._resolve_clip(clip_ref)
         if clip is None or clip.element is None:
             raise ValueError(f"Clip '{clip_ref}' not found")
@@ -86,11 +90,104 @@ class TimelineAPI:
         clip = self._resolve_clip(clip_ref)
         if clip is None or clip.element is None:
             return False
+        current_in = int(clip.element.get("in", "0"))
+        current_out_raw = clip.element.get("out")
+        current_out = int(current_out_raw) if current_out_raw is not None else current_in
+        target_in = int(new_in) if new_in is not None else current_in
+        target_out = int(new_out) if new_out is not None else current_out
+        if target_in < 0 or target_out < 0:
+            raise ValueError("in/out points must be >= 0")
+        if target_out < target_in:
+            raise ValueError("out point must be >= in point")
         if new_in is not None:
             clip.element.set("in", new_in)
         if new_out is not None:
             clip.element.set("out", new_out)
         return True
+
+    def split_clip(self, clip_ref: str, position: int) -> str:
+        if position < 0:
+            raise ValueError("position must be >= 0")
+        clip = self._resolve_clip(clip_ref)
+        if clip is None or clip.element is None:
+            raise ValueError(f"Clip '{clip_ref}' not found")
+        if position <= clip.timeline_start or position > clip.timeline_end:
+            raise ValueError(
+                f"split position {position} must be within clip range [{clip.timeline_start + 1}, {clip.timeline_end}]"
+            )
+        playlist = self._get_playlist(clip.track_id)
+        entry = clip.element
+        split_offset = position - clip.timeline_start
+        first_entry, second_entry = self._split_entry(entry, split_offset)
+        for prop in list(second_entry.findall('./property[@name="harness:clip-ref"]')):
+            second_entry.remove(prop)
+        second_clip_ref = f"hclip_{uuid4().hex}"
+        ref_prop = etree.SubElement(second_entry, "property", name="harness:clip-ref")
+        ref_prop.text = second_clip_ref
+        idx = list(playlist).index(entry)
+        playlist.remove(entry)
+        playlist.insert(idx, first_entry)
+        playlist.insert(idx + 1, second_entry)
+        self._normalize_playlist(playlist)
+        return second_clip_ref
+
+    def ripple_delete(self, clip_ref: str) -> bool:
+        return self.remove_clip(clip_ref=clip_ref, close_gap=True)
+
+    def insert_gap(self, track_id: str, position: int, length: int) -> bool:
+        if position < 0:
+            raise ValueError("position must be >= 0")
+        if length <= 0:
+            raise ValueError("length must be > 0")
+        playlist = self._get_playlist(track_id)
+        cursor = 0
+        for idx, node in enumerate(list(playlist)):
+            if node.tag == "blank":
+                blank_len = int(node.get("length", "0"))
+                if position < cursor + blank_len:
+                    node.set("length", str(blank_len + length))
+                    self._normalize_playlist(playlist)
+                    return True
+                if position == cursor:
+                    playlist.insert(idx, etree.Element("blank", length=str(length)))
+                    self._normalize_playlist(playlist)
+                    return True
+                cursor += blank_len
+                continue
+
+            if node.tag != "entry":
+                continue
+            duration = self.project._entry_duration(node)
+            if position == cursor:
+                playlist.insert(idx, etree.Element("blank", length=str(length)))
+                self._normalize_playlist(playlist)
+                return True
+            if cursor < position < cursor + duration:
+                split_offset = position - cursor
+                first_entry, second_entry = self._split_entry(node, split_offset)
+                playlist.remove(node)
+                playlist.insert(idx, first_entry)
+                playlist.insert(idx + 1, etree.Element("blank", length=str(length)))
+                playlist.insert(idx + 2, second_entry)
+                self._normalize_playlist(playlist)
+                return True
+            cursor += duration
+
+        if position > cursor:
+            playlist.append(etree.Element("blank", length=str(position - cursor)))
+        playlist.append(etree.Element("blank", length=str(length)))
+        self._normalize_playlist(playlist)
+        return True
+
+    def remove_all_gaps(self, track_id: str) -> int:
+        playlist = self._get_playlist(track_id)
+        removed = 0
+        for node in list(playlist):
+            if node.tag == "blank":
+                removed += int(node.get("length", "0"))
+                playlist.remove(node)
+        self._normalize_playlist(playlist)
+        return removed
 
     def batch_move_clips(self, moves: List[ClipMove]) -> int:
         moved = 0
@@ -115,8 +212,6 @@ class TimelineAPI:
     def _insert_entry_at_position(
         self, playlist: Element, entry: Element, position: int, allow_overlap: bool
     ) -> None:
-        if position < 0:
-            raise ValueError("position must be >= 0")
         cursor = 0
         for idx, node in enumerate(list(playlist)):
             if node.tag == "blank":
@@ -177,3 +272,21 @@ class TimelineAPI:
                 nodes.pop(i + 1)
                 continue
             i += 1
+
+    @staticmethod
+    def _split_entry(entry: Element, offset_frames: int) -> Tuple[Element, Element]:
+        duration = max(1, int(entry.get("out", entry.get("in", "0"))) - int(entry.get("in", "0")) + 1)
+        if offset_frames <= 0 or offset_frames >= duration:
+            raise ValueError("split point must produce two non-empty clips")
+        start = int(entry.get("in", "0"))
+        end_raw = entry.get("out")
+        end = int(end_raw) if end_raw is not None else start
+        first_end = start + offset_frames - 1
+        second_start = first_end + 1
+        first = etree.fromstring(etree.tostring(entry))
+        second = etree.fromstring(etree.tostring(entry))
+        first.set("in", str(start))
+        first.set("out", str(first_end))
+        second.set("in", str(second_start))
+        second.set("out", str(end))
+        return first, second

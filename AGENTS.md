@@ -31,3 +31,12 @@ Enable coding agents to use Kdenlive capabilities end-to-end for real video edit
 - Non-zero exit codes must match documented error semantics.
 - Documentation stays synchronized with actual CLI behavior.
 
+## Delivery Process (Mandatory)
+- Any PR/change that adds, removes, or changes an action or CLI command must update docs in the same change.
+- Required docs to update when command surface changes:
+  - `docs/human/commands.md`
+  - `docs/llm/command-spec.md`
+  - `docs/llm/bridge-protocol.md`
+  - `README.md` quick examples when user-facing workflow changes
+- Any PR/change that alters JSON output shape must also update `docs/llm/response-schema.json` (or confirm no schema impact).
+- Do not mark work complete until docs and tests are both updated and passing.

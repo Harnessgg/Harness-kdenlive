@@ -10,17 +10,27 @@ Agent-first Python package for safe, scriptable edits to `.kdenlive` project fil
 ## Install
 
 ```bash
-pip install harness-kdenlive
+pip install harnessgg-kdenlive
 ```
 
 ## Quick Start
 
 ```bash
 harness-kdenlive bridge start
+harness-kdenlive doctor --include-render
+harness-kdenlive create-project edit.kdenlive --title "Agent Edit" --overwrite
+harness-kdenlive import-asset edit.kdenlive C:\path\to\clip.mp4 --producer-id clip1
+harness-kdenlive add-text edit.kdenlive "Intro Title" --duration-frames 75 --track-id playlist0 --position 0
+harness-kdenlive stitch-clips edit.kdenlive playlist0 clip1 clip1 --position 75 --gap 10
 harness-kdenlive inspect project.kdenlive
 harness-kdenlive validate project.kdenlive
 harness-kdenlive add-clip project.kdenlive producer1 playlist0 120 --output edited.kdenlive
 harness-kdenlive diff project.kdenlive edited.kdenlive
+harness-kdenlive render-project edited.kdenlive output.mp4
+harness-kdenlive list-effects edited.kdenlive producer1
+harness-kdenlive apply-effect edited.kdenlive producer1 brightness --effect-id fx1 --properties-json "{\"gain\":\"0.5\"}"
+harness-kdenlive list-transitions edited.kdenlive
+harness-kdenlive bridge soak --iterations 100 --duration-seconds 5
 harness-kdenlive bridge verify --iterations 25
 ```
 
