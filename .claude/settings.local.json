@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(tree:*)",
+      "Bash(du:*)",
+      "Bash(wc:*)",
+      "Bash(done)",
+      "Bash(python -m pip install:*)",
+      "Bash(python tests/test_harness.py:*)",
+      "Bash(python:*)",
+      "Bash(kdenlive-agent:*)"
+    ]
+  }
+}
