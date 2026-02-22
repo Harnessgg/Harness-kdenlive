@@ -4,7 +4,7 @@
 Enable coding agents to use Kdenlive capabilities end-to-end for real video editing workflows (timeline edits + render/export), reliably and programmatically.
 
 ## Operating Model
-- `harness-kdenlive` is bridge-first.
+- `harnessgg-kdenlive` is bridge-first.
 - Agent commands must be deterministic, machine-readable JSON.
 - Command names should map to explicit action methods (`system.*`, `project.*`, `timeline.*`, `render.*`).
 - Bridge runs locally only (`127.0.0.1`) and must expose health + stability checks.

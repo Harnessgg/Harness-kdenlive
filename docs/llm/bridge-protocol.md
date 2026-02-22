@@ -5,6 +5,10 @@ Transport: HTTP JSON-RPC style over localhost.
 - Health endpoint: `GET /health`
 - RPC endpoint: `POST /rpc`
 
+## CLI Discovery
+
+Use `harnessgg-kdenlive capabilities` to list CLI commands and (when available) bridge actions. Use `system.actions` to enumerate bridge methods directly.
+
 Request:
 
 ```json

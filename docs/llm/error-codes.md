@@ -13,7 +13,7 @@
 
 - Retry only when `error.code == "BRIDGE_UNAVAILABLE"`.
 - Recommended retry backoff: `0.5s`, `1s`, `2s` (max 3 retries).
-- Before retrying mutating commands, run `harness-kdenlive bridge status`.
+- Before retrying mutating commands, run `harnessgg-kdenlive bridge status`.
 
 ## JSON error object
 
@@ -29,3 +29,4 @@
   }
 }
 ```
+

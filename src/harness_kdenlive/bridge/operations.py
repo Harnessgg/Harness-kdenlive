@@ -708,7 +708,7 @@ def _binary_version(path: Path, args: List[str]) -> Optional[str]:
 def _latest_kdenlive_version() -> Optional[str]:
     request = urllib.request.Request(
         "https://api.github.com/repos/KDE/kdenlive/releases/latest",
-        headers={"Accept": "application/vnd.github+json", "User-Agent": "harness-kdenlive/doctor"},
+        headers={"Accept": "application/vnd.github+json", "User-Agent": "harnessgg-kdenlive/doctor"},
         method="GET",
     )
     try:
@@ -2827,7 +2827,7 @@ def execute(method: str, params: Dict[str, Any]) -> Dict[str, Any]:
             output.parent.mkdir(parents=True, exist_ok=True)
             timeline = loaded.get_clips_on_timeline()
             if method == "export.edl":
-                lines = ["TITLE: harness-kdenlive export", "FCM: NON-DROP FRAME"]
+                lines = ["TITLE: harnessgg-kdenlive export", "FCM: NON-DROP FRAME"]
                 for idx, clip in enumerate(timeline, start=1):
                     lines.append(
                         f"{idx:03d}  AX       V     C        {clip.timeline_start:08d} {clip.timeline_end:08d} {clip.timeline_start:08d} {clip.timeline_end:08d}"

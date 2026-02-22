@@ -14,6 +14,8 @@ from harness_kdenlive.bridge.client import BridgeClient, BridgeClientError
 from harness_kdenlive.bridge.protocol import ERROR_CODES, PROTOCOL_VERSION
 from harness_kdenlive.bridge.server import run_bridge_server
 
+CLI_NAME = "harnessgg-kdenlive"
+
 app = typer.Typer(add_completion=False, help="Bridge-first CLI for Kdenlive editing")
 bridge_app = typer.Typer(add_completion=False, help="Bridge lifecycle and verification")
 app.add_typer(bridge_app, name="bridge")
@@ -75,7 +77,7 @@ def _json_arg(command: str, raw: str) -> Dict[str, Any]:
 
 def _bridge_state_dir() -> Path:
     root = Path(os.getenv("LOCALAPPDATA", Path.home()))
-    state_dir = root / "harness-kdenlive"
+    state_dir = root / CLI_NAME
     state_dir.mkdir(parents=True, exist_ok=True)
     return state_dir
 
@@ -216,6 +218,46 @@ def bridge_soak(
 @app.command("actions")
 def actions() -> None:
     _ok("actions", _call_bridge("actions", "system.actions", {}))
+
+
+def _command_names(typer_app: typer.Typer) -> List[str]:
+    names: List[str] = []
+    for cmd in typer_app.registered_commands:
+        if cmd.name:
+            names.append(cmd.name)
+    for group in getattr(typer_app, "registered_groups", []):
+        if group.name:
+            names.append(group.name)
+    return sorted(set(names))
+
+
+@app.command("capabilities")
+def capabilities() -> None:
+    bridge_client = _bridge_client()
+    bridge_info: Dict[str, Any] = {"available": False, "url": bridge_client.url}
+    try:
+        actions_response = bridge_client.call("system.actions", {}, timeout_seconds=5)
+        bridge_info = {
+            "available": True,
+            "url": bridge_client.url,
+            "actions": actions_response.get("actions", []),
+        }
+    except BridgeClientError as exc:
+        bridge_info["error"] = {"code": exc.code, "message": exc.message}
+    except Exception as exc:
+        bridge_info["error"] = {"code": "ERROR", "message": str(exc)}
+
+    data = {
+        "cli": {
+            "name": CLI_NAME,
+            "version": __version__,
+            "protocolVersion": PROTOCOL_VERSION,
+            "commands": _command_names(app),
+            "groups": {"bridge": _command_names(bridge_app)},
+        },
+        "bridge": bridge_info,
+    }
+    _ok("capabilities", data)
 
 
 @app.command("doctor")
@@ -707,7 +749,7 @@ def version() -> None:
         {
             "version": __version__,
             "package": "harnessgg-kdenlive",
-            "cli": "harness-kdenlive",
+            "cli": CLI_NAME,
         },
     )
 

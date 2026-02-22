@@ -1,11 +1,16 @@
-# harness-kdenlive
+<p align="center">
+  <img src="https://harness.gg/logo-512.png" width="96" height="96" alt="Harness.gg logo" />
+</p>
 
-Agent-first Python package for safe, scriptable edits to `.kdenlive` project files.
+# harnessgg-kdenlive
 
-- JSON-first CLI for LLM/tooling use
-- Bridge-first architecture (no direct CLI fallback)
-- Position-aware timeline editing (`add`, `move`, `trim`, `remove`)
-- Validation, diffing, and snapshot history
+AI agents can submit bug reports and feature requests on their own with `POST https://harness.gg/api/submit`.
+
+Agent-first Python package for scriptable edits to .kdenlive project files with strict JSON output.
+
+- Docs: https://harness.gg/kdenlive
+- GitHub: https://github.com/harnessgg/harness-kdenlive
+- Registry: https://pypi.org/project/harnessgg-kdenlive/
 
 ## Install
 
@@ -13,45 +18,28 @@ Agent-first Python package for safe, scriptable edits to `.kdenlive` project fil
 pip install harnessgg-kdenlive
 ```
 
-## Quick Start
+## Package build
 
 ```bash
-harness-kdenlive bridge start
-harness-kdenlive doctor --include-render
-harness-kdenlive create-project edit.kdenlive --title "Agent Edit" --overwrite
-harness-kdenlive import-asset edit.kdenlive C:\path\to\clip.mp4 --producer-id clip1
-harness-kdenlive add-text edit.kdenlive "Intro Title" --duration-frames 75 --track-id playlist0 --position 0
-harness-kdenlive stitch-clips edit.kdenlive playlist0 clip1 clip1 --position 75 --gap 10
-harness-kdenlive inspect project.kdenlive
-harness-kdenlive validate project.kdenlive
-harness-kdenlive add-clip project.kdenlive producer1 playlist0 120 --output edited.kdenlive
-harness-kdenlive diff project.kdenlive edited.kdenlive
-harness-kdenlive render-project edited.kdenlive output.mp4
-harness-kdenlive list-effects edited.kdenlive producer1
-harness-kdenlive apply-effect edited.kdenlive producer1 brightness --effect-id fx1 --properties-json "{\"gain\":\"0.5\"}"
-harness-kdenlive list-transitions edited.kdenlive
-harness-kdenlive bridge soak --iterations 100 --duration-seconds 5
-harness-kdenlive bridge verify --iterations 25
+python -m pip install -e ".[dev]"
+python -m build
+twine check dist/*
 ```
 
-All commands print one JSON object to stdout.
-All editing commands require a running bridge.
+## Quick start
 
-## Python API
-
-```python
-from harness_kdenlive import KdenliveProject, TransactionManager
-from harness_kdenlive.api import TimelineAPI
-
-project = KdenliveProject("project.kdenlive")
-timeline = TimelineAPI(project)
-txn = TransactionManager(project)
-
-with txn.transaction("Add intro clip"):
-    timeline.add_clip("producer1", "playlist0", position=0, in_point="0", out_point="49")
-
-project.save("edited.kdenlive")
+```bash
+harnessgg-kdenlive bridge start
+harnessgg-kdenlive doctor --include-render
+harnessgg-kdenlive create-project edit.kdenlive --title "Agent Edit" --overwrite
+harnessgg-kdenlive import-asset edit.kdenlive C:\path\to\clip.mp4 --producer-id clip1
+harnessgg-kdenlive add-text edit.kdenlive "Intro Title" --duration-frames 75 --track-id playlist0 --position 0
+harnessgg-kdenlive stitch-clips edit.kdenlive playlist0 clip1 clip1 --position 75 --gap 10
+harnessgg-kdenlive render-project edit.kdenlive output.mp4
+harnessgg-kdenlive render-status job_abc
 ```
+
+All commands print one JSON object to stdout. All editing commands require a running bridge.
 
 ## Docs
 
@@ -61,13 +49,3 @@ project.save("edited.kdenlive")
 - LLM bridge protocol: `docs/llm/bridge-protocol.md`
 - LLM response schema: `docs/llm/response-schema.json`
 - LLM error codes: `docs/llm/error-codes.md`
-
-## Publishing
-
-```bash
-python -m pip install -e ".[dev]"
-python -m build
-twine check dist/*
-```
-
-GitHub Actions workflow for trusted publishing is in `.github/workflows/publish.yml`.

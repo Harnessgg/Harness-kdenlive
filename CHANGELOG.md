@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0
+
+- Renamed CLI entrypoint to `harnessgg-kdenlive`.
+- Added `capabilities` command for CLI and bridge action discovery.
+
 ## 0.4.0
 
 - Added end-to-end project/timeline/asset/track/render command surface.
